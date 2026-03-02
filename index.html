@@ -382,9 +382,20 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
 }
 
 /* Mobile card view: fullscreen, responsive cell sizes */
-.mobile-card-view {
-  padding: 12px 14px 28px;
+.mobile-char-header .m-actions {
+  display: flex; flex-direction: column; gap: 5px; margin-left: auto;
 }
+.m-action-btn {
+  padding: 5px 10px; border-radius: 8px;
+  border: 1.5px solid var(--grid); background: white;
+  font-size: 12px; color: var(--ink); cursor: pointer;
+  white-space: nowrap; transition: all 0.15s;
+}
+.m-action-btn:hover { border-color: var(--gold); color: var(--gold); }
+.m-action-btn.active { background: var(--gold); color: white; border-color: var(--gold); }
+.mobile-tracing-section { padding: 10px 12px; background: white; border-top: 1px solid var(--cream); }
+
+
 .mobile-char-block {
   margin-bottom: 24px; border-radius: 12px; overflow: hidden;
   border: 1.5px solid var(--cream);
@@ -4308,16 +4319,27 @@ function renderMobileCards() {
     const block = document.createElement('div');
     block.className = 'mobile-char-block';
 
+    // Find idx in charDataList
+    const idx = charDataList.indexOf(d);
+
     // Header: big char + bopo + stroke count
     block.innerHTML = `
       <div class="mobile-char-header">
         <div class="m-char">${d.char}</div>
-        <div>
+        <div style="flex:1;">
           <div class="m-bopo">${bopoStr}</div>
           <div class="m-meta">共 ${d.strokeCount} 筆</div>
         </div>
+        <div class="m-actions">
+          <button class="m-action-btn" onclick="openPracticeModal(${idx})" title="引導練習">✍ 引導練習</button>
+          <button class="m-action-btn m-trace-btn" id="m-trace-btn-${idx}" onclick="toggleMobileTracing(${idx})">✏ 描寫格</button>
+        </div>
       </div>
-      <div class="mobile-steps-grid" id="msteps-${d.char}"></div>`;
+      <div class="mobile-steps-grid" id="msteps-${d.char}"></div>
+      <div class="mobile-tracing-section" id="m-tracing-${idx}" style="display:none;">
+        <div class="practice-label">描寫練習</div>
+        <div class="tracing-row" id="m-tracing-row-${idx}"></div>
+      </div>`;
     view.appendChild(block);
 
     // Fill steps grid - use responsive size from CSS (auto-fill)
@@ -4335,6 +4357,35 @@ function renderMobileCards() {
       grid.appendChild(item);
     });
   });
+}
+
+// ══════════════════════════════════════════
+// MOBILE TRACING TOGGLE
+// ══════════════════════════════════════════
+function toggleMobileTracing(idx) {
+  const sec = document.getElementById('m-tracing-' + idx);
+  const btn = document.getElementById('m-trace-btn-' + idx);
+  if (!sec) return;
+  const isOpen = sec.style.display !== 'none';
+  sec.style.display = isOpen ? 'none' : '';
+  if (btn) btn.classList.toggle('active', !isOpen);
+  if (!isOpen) {
+    // Build tracing cells into mobile row if not yet built
+    const row = document.getElementById('m-tracing-row-' + idx);
+    if (row && row.innerHTML === '') {
+      const d = charDataList[idx];
+      if (d) {
+        const TSIZE = 240;
+        const ghost = makeGhostSVG(d.strokeData, TSIZE);
+        row.innerHTML = '';
+        const pair = document.createElement('div');
+        pair.className = 'tracing-pair';
+        pair.appendChild(makeTraceCanvas(TSIZE, ghost, '描寫', `tc-m-trace-${idx}`));
+        pair.appendChild(makeTraceCanvas(TSIZE, null, '練習', `tc-m-prac-${idx}`));
+        row.appendChild(pair);
+      }
+    }
+  }
 }
 
 // ══════════════════════════════════════════
