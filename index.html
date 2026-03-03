@@ -163,13 +163,13 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
 }
 .speak-btn:hover { border-color: var(--gold); background: rgba(196,160,64,0.08); }
 .speak-btn.speaking { border-color: var(--gold); color: var(--gold); }
-.pm-open-btn {
+.practice-open-btn {
   font-size: 11px; padding: 4px 10px;
-  background: none; border: 1.5px solid var(--cream);
+  background: none; border: 1.5px solid var(--gold);
   border-radius: 6px; cursor: pointer;
-  color: var(--muted); transition: all 0.15s; font-weight: 700;
+  color: var(--gold); transition: all 0.15s; font-weight: 700;
 }
-.pm-open-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(196,160,64,0.08); }
+.practice-open-btn:hover { background: var(--gold); color: white; }
 
 .char-card-body { padding: 16px 18px; }
 .steps-label { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
@@ -299,9 +299,7 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
 .print-mode-toggle input { cursor: pointer; width: 15px; height: 15px; }
 
 @media print {
-  .tracing-section { display: block !important; }
   .trace-clear-btn { display: none !important; }
-  .tracing-toggle-btn { display: none !important; }
 
   .no-print { display: none !important; }
   .app-header, .sidebar, .main-area > *:not(#printArea) { display: none !important; }
@@ -574,6 +572,38 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
 .tracing-toggle-btn:hover { border-color: var(--gold); color: var(--gold); }
 .tracing-toggle-btn.active { background: var(--gold); color: white; border-color: var(--gold); }
 /* ══ 引導練習 Modal ══════════════════════════════════════════════════════════ */
+/* ── 模式切換 tabs ── */
+.pm-tabs {
+  display: flex; gap: 0; border: 1.5px solid var(--grid);
+  border-radius: 10px; overflow: hidden; width: 100%;
+}
+.pm-tab {
+  flex: 1; padding: 7px 4px; font-size: 12px; font-weight: 700;
+  border: none; background: white; color: var(--muted);
+  cursor: pointer; transition: all 0.15s; border-right: 1px solid var(--grid);
+  line-height: 1.3;
+}
+.pm-tab:last-child { border-right: none; }
+.pm-tab.active { background: var(--gold); color: white; }
+.pm-tab:hover:not(.active) { background: rgba(196,160,64,0.1); color: var(--gold); }
+
+/* ── 描寫/空白 canvas 格子（在 modal 內）── */
+.pm-trace-wrap {
+  position: relative; border: 1.5px solid var(--grid); border-radius: 8px;
+  background: white; overflow: hidden; flex-shrink: 0;
+}
+.pm-trace-wrap::before, .pm-trace-wrap::after {
+  content: ''; position: absolute; background: rgba(180,170,155,0.45);
+  pointer-events: none; z-index: 1;
+}
+.pm-trace-wrap::before { width: 100%; height: 1px; top: 50%; transform: translateY(-50%); }
+.pm-trace-wrap::after  { height: 100%; width: 1px; left: 50%; transform: translateX(-50%); }
+.pm-trace-ghost {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+}
+.pm-trace-ghost svg { width: 100%; height: 100%; display: block; }
+#pmTraceCanvas { position: relative; z-index: 2; display: block; cursor: crosshair; touch-action: none; }
+
 #practiceModal {
   display: none; position: fixed; inset: 0; z-index: 1000;
   background: rgba(30,25,18,0.62); backdrop-filter: blur(3px);
@@ -1073,7 +1103,6 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
       <div class="section-header">
         <div class="section-title" id="cardsTitle">筆順預覽</div>
         <div class="section-actions" style="display:flex;align-items:center;gap:8px;">
-          <button class="tracing-toggle-btn" id="tracingToggleBtn" onclick="toggleTracingMode()">✏ 描寫格</button>
           <div class="preview-size-controls">
             <span>大小</span>
             <button class="size-btn active" id="sizeSmBtn" onclick="setPreviewSize('sm')">小</button>
@@ -4008,7 +4037,7 @@ function renderCards() {
         <div class="card-actions">
           <button class="fav-btn ${isFavoured(d.char)?'starred':''}" onclick="openFavPopup(event,'${d.char}')" title="收藏">★</button>
           <button class="speak-btn" onclick="speakChar('${d.char}', this)" title="朗讀">🔊</button>
-          <button class="pm-open-btn" onclick="openPracticeModal(${idx})" title="引導練習">✍ 引導練習</button>
+          <button class="practice-open-btn" onclick="openPracticeModal(${idx})" title="筆順練習">✍ 筆順練習</button>
           <button class="edit-btn" onclick="toggleEdit(${idx})">✏ 校正</button>
           <button class="remove-btn" onclick="removeChar(${idx})" title="移除此字">✕</button>
         </div>
@@ -4016,10 +4045,6 @@ function renderCards() {
       <div class="char-card-body">
         <div class="steps-label">筆順步驟示範</div>
         <div class="steps-row" id="steps-${idx}"></div>
-        <div class="tracing-section" id="tracing-${idx}" style="display:none;">
-          <div class="tracing-label">描寫練習</div>
-          <div class="tracing-row" id="tracing-row-${idx}"></div>
-        </div>
         <div class="edit-panel" id="ep-${idx}">${buildEditPanel(d, idx)}</div>
       </div>`;
     container.appendChild(card);
@@ -4059,8 +4084,7 @@ function renderCards() {
       }
     });
 
-    // Build tracing cells (hidden until user clicks 描寫格)
-    buildTracingCells(d, idx);
+    // Render SVG steps done
   });
 }
 
@@ -4331,15 +4355,10 @@ function renderMobileCards() {
           <div class="m-meta">共 ${d.strokeCount} 筆</div>
         </div>
         <div class="m-actions">
-          <button class="m-action-btn" onclick="openPracticeModal(${idx})" title="引導練習">✍ 引導練習</button>
-          <button class="m-action-btn m-trace-btn" id="m-trace-btn-${idx}" onclick="toggleMobileTracing(${idx})">✏ 描寫格</button>
+          <button class="m-action-btn practice-open-btn" onclick="openPracticeModal(${idx})" title="筆順練習">✍ 筆順練習</button>
         </div>
       </div>
-      <div class="mobile-steps-grid" id="msteps-${d.char}"></div>
-      <div class="mobile-tracing-section" id="m-tracing-${idx}" style="display:none;">
-        <div class="practice-label">描寫練習</div>
-        <div class="tracing-row" id="m-tracing-row-${idx}"></div>
-      </div>`;
+      <div class="mobile-steps-grid" id="msteps-${d.char}"></div>`;
     view.appendChild(block);
 
     // Fill steps grid - use responsive size from CSS (auto-fill)
@@ -4924,9 +4943,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 const PM_SIZE = 340;
 
-// State
+// ── State ────────────────────────────────────────────────────────────────────
 let pmState = {
-  charIdx: 0,       // index in charDataList for current char
+  charIdx: 0,
   data: null,
   steps: [],
   current: 0,
@@ -4936,45 +4955,117 @@ let pmState = {
   penDown: false,
   lastX: 0, lastY: 0,
   penTimer: null,
+  mode: 'guided', // 'guided' | 'trace' | 'blank'
+  traceCtx: null,
+  traceHistory: [],
+  tracePenDown: false,
+  traceLastX: 0, traceLastY: 0,
 };
 
-// ── Rebuild the modal inner HTML and re-initialise ────────────────────────────
-function buildPmHTML() {
-  document.querySelector('.pm-box').innerHTML = `
-    <button class="pm-close" onclick="closePracticeModal()">✕</button>
-    <div class="pm-title">
-      <span id="pmChar"></span>
-      <span id="pmBopoStr" style="font-size:28px;color:var(--red)"></span>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span class="pm-stroke-info" id="pmStrokeInfo"></span>
-      <button class="pm-ghost-toggle on" id="pmGhostToggle" onclick="togglePmGhost()">顯示範字</button>
-    </div>
-    <div class="pm-canvas-wrap" id="pmCanvasWrap">
-      <div class="pm-ghost" id="pmGhost"></div>
-      <canvas id="pmCanvas"></canvas>
-    </div>
-    <div class="pm-progress" id="pmProgress"></div>
-    <div class="pm-hint" id="pmHint"></div>
-    <div class="pm-actions">
-      <button class="pm-btn" onclick="undoPmStroke()">↩ 上一筆</button>
-      <button class="pm-btn" onclick="clearPmCanvas()">清除重寫</button>
-      <button class="pm-btn" onclick="skipPmStroke()">跳過此筆 →</button>
-    </div>`;
+// ── Build modal inner HTML ────────────────────────────────────────────────────
+function buildPmHTML(mode) {
+  const toneMarks = ['','ˉ','ˊ','ˇ','ˋ','˙'];
+  const d = pmState.data;
+  const bopoStr = d.bopomofo + (toneMarks[d.tone] || '');
+
+  const hasNext = pmState.charIdx + 1 < charDataList.length;
+  const nextBtn = hasNext
+    ? `<button class="pm-btn" onclick="openPracticeModal(${pmState.charIdx + 1}, 'guided')">下一個字 →</button>`
+    : '';
+  const hasPrev = pmState.charIdx > 0;
+  const prevBtn = hasPrev
+    ? `<button class="pm-btn" onclick="openPracticeModal(${pmState.charIdx - 1}, 'guided')">← 上一個字</button>`
+    : '';
+
+  if (mode === 'guided') {
+    document.querySelector('.pm-box').innerHTML = `
+      <button class="pm-close" onclick="closePracticeModal()">✕</button>
+      <div class="pm-title">
+        <span>${d.char}</span>
+        <span style="font-size:28px;color:var(--red)">${bopoStr}</span>
+      </div>
+      <div class="pm-tabs">
+        <button class="pm-tab active" onclick="switchPmMode('guided')">✍ 引導練習</button>
+        <button class="pm-tab" onclick="switchPmMode('trace')">描寫練習</button>
+        <button class="pm-tab" onclick="switchPmMode('blank')">空白格練習</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="pm-stroke-info" id="pmStrokeInfo"></span>
+        <button class="pm-ghost-toggle on" id="pmGhostToggle" onclick="togglePmGhost()">顯示範字</button>
+      </div>
+      <div class="pm-canvas-wrap" id="pmCanvasWrap">
+        <div class="pm-ghost" id="pmGhost"></div>
+        <canvas id="pmCanvas"></canvas>
+      </div>
+      <div class="pm-progress" id="pmProgress"></div>
+      <div class="pm-hint" id="pmHint"></div>
+      <div class="pm-actions">
+        <button class="pm-btn" onclick="undoPmStroke()">↩ 上一筆</button>
+        <button class="pm-btn" onclick="clearPmCanvas()">清除重寫</button>
+        <button class="pm-btn" onclick="skipPmStroke()">跳過此筆 →</button>
+        ${prevBtn}
+        ${nextBtn}
+      </div>`;
+  } else {
+    // trace or blank mode — full canvas for free writing
+    const ghostHtml = (mode === 'trace')
+      ? `<div class="pm-trace-ghost" id="pmTraceGhost">${makeGhostSVG(d.strokeData, PM_SIZE)}</div>`
+      : '';
+    const modeLabel = mode === 'trace' ? '在淡色範字上描寫' : '空白格自由練習';
+    document.querySelector('.pm-box').innerHTML = `
+      <button class="pm-close" onclick="closePracticeModal()">✕</button>
+      <div class="pm-title">
+        <span>${d.char}</span>
+        <span style="font-size:28px;color:var(--red)">${bopoStr}</span>
+      </div>
+      <div class="pm-tabs">
+        <button class="pm-tab" onclick="switchPmMode('guided')">✍ 引導練習</button>
+        <button class="pm-tab ${mode==='trace'?'active':''}" onclick="switchPmMode('trace')">描寫練習</button>
+        <button class="pm-tab ${mode==='blank'?'active':''}" onclick="switchPmMode('blank')">空白格練習</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;">${modeLabel}</div>
+      <div class="pm-trace-wrap" id="pmTraceWrap">
+        ${ghostHtml}
+        <canvas id="pmTraceCanvas"></canvas>
+      </div>
+      <div class="pm-actions">
+        <button class="pm-btn" onclick="undoTraceStroke()">↩ 上一筆</button>
+        <button class="pm-btn" onclick="clearTraceCanvas()">清除重寫</button>
+        ${hasPrev ? `<button class="pm-btn" onclick="openPracticeModal(${pmState.charIdx - 1}, '${mode}')">← 上一個字</button>` : ''}
+        ${hasNext ? `<button class="pm-btn" onclick="openPracticeModal(${pmState.charIdx + 1}, '${mode}')">下一個字 →</button>` : ''}
+      </div>`;
+  }
 }
 
-// ── Open modal for a given charDataList index ─────────────────────────────────
-function openPracticeModal(idx) {
+// ── Switch mode tab ───────────────────────────────────────────────────────────
+function switchPmMode(mode) {
+  pmState.mode = mode;
+  pmState.strokeHistory = [];
+  pmState.traceHistory = [];
+  buildPmHTML(mode);
+  if (mode === 'guided') {
+    initGuidedMode();
+  } else {
+    initFreeMode(mode);
+  }
+}
+
+// ── Open modal ────────────────────────────────────────────────────────────────
+function openPracticeModal(idx, mode) {
   const d = charDataList[idx];
   if (!d || !d.strokeData) return;
 
+  mode = mode || 'guided';
+
   pmState.charIdx = idx;
   pmState.data    = d;
+  pmState.mode    = mode;
   pmState.steps   = [];
   pmState.current = 0;
   pmState.strokeHistory = [];
+  pmState.traceHistory  = [];
 
-  // Build step list: one entry per individual stroke
+  // Build step list
   let cumul = [];
   d.grouping.forEach(g => {
     (g.newNums || []).forEach(n => {
@@ -4983,10 +5074,17 @@ function openPracticeModal(idx) {
     });
   });
 
-  // Rebuild HTML (guarantees fresh DOM elements + fresh canvas)
-  buildPmHTML();
+  buildPmHTML(mode);
+  if (mode === 'guided') {
+    initGuidedMode();
+  } else {
+    initFreeMode(mode);
+  }
+  document.getElementById('practiceModal').classList.add('open');
+}
 
-  // Setup canvas
+// ── Init guided mode ──────────────────────────────────────────────────────────
+function initGuidedMode() {
   const canvas = document.getElementById('pmCanvas');
   canvas.width  = PM_SIZE;
   canvas.height = PM_SIZE;
@@ -4998,20 +5096,31 @@ function openPracticeModal(idx) {
   pmState.ctx.lineWidth   = 5;
   pmState.ctx.lineCap     = 'round';
   pmState.ctx.lineJoin    = 'round';
-
-  // Title
-  const bopoStr = d.bopomofo + (['','ˉ','ˊ','ˇ','ˋ','˙'][d.tone] || '');
-  document.getElementById('pmChar').textContent    = d.char;
-  document.getElementById('pmBopoStr').textContent = bopoStr;
-
-  // Ghost toggle
+  pmState.current = 0;
+  pmState.strokeHistory = [];
   pmState.ghostOn = true;
 
-  // Attach drawing events to the fresh canvas
   attachPmDrawing(canvas);
-
   renderPmStep();
-  document.getElementById('practiceModal').classList.add('open');
+}
+
+// ── Init free-draw mode (trace / blank) ───────────────────────────────────────
+function initFreeMode(mode) {
+  const canvas = document.getElementById('pmTraceCanvas');
+  canvas.width  = PM_SIZE;
+  canvas.height = PM_SIZE;
+  document.getElementById('pmTraceWrap').style.width  = PM_SIZE + 'px';
+  document.getElementById('pmTraceWrap').style.height = PM_SIZE + 'px';
+
+  pmState.traceCtx = canvas.getContext('2d');
+  pmState.traceCtx.strokeStyle = '#1c1a16';
+  pmState.traceCtx.lineWidth   = 5;
+  pmState.traceCtx.lineCap     = 'round';
+  pmState.traceCtx.lineJoin    = 'round';
+  pmState.traceHistory = [];
+  pmState.tracePenDown = false;
+
+  attachTraceDrawing(canvas);
 }
 
 function closePracticeModal() {
@@ -5027,7 +5136,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closePracticeModal();
 });
 
-// ── Render current step ───────────────────────────────────────────────────────
+// ── Render guided step ────────────────────────────────────────────────────────
 function renderPmStep() {
   const d    = pmState.data;
   const step = pmState.steps[pmState.current];
@@ -5036,13 +5145,11 @@ function renderPmStep() {
   document.getElementById('pmStrokeInfo').textContent =
     '第 ' + (pmState.current + 1) + ' 筆，共 ' + total + ' 筆';
 
-  // Ghost SVG: previous strokes black, current stroke red-highlighted
   const prevCumul = pmState.current > 0 ? pmState.steps[pmState.current - 1].cumul : [];
   document.getElementById('pmGhost').innerHTML =
     makeSVG(d.strokeData, prevCumul, [step.num], PM_SIZE, true);
   updatePmGhostVisibility();
 
-  // Progress dots
   const prog = document.getElementById('pmProgress');
   prog.innerHTML = '';
   pmState.steps.forEach((_, i) => {
@@ -5052,8 +5159,7 @@ function renderPmStep() {
     prog.appendChild(dot);
   });
 
-  document.getElementById('pmHint').textContent =
-    '請描寫第 ' + (pmState.current + 1) + ' 筆';
+  document.getElementById('pmHint').textContent = '請描寫第 ' + (pmState.current + 1) + ' 筆';
 }
 
 function updatePmGhostVisibility() {
@@ -5071,18 +5177,16 @@ function togglePmGhost() {
   updatePmGhostVisibility();
 }
 
-// ── Stroke control ────────────────────────────────────────────────────────────
+// ── Guided stroke control ─────────────────────────────────────────────────────
 function advancePmStroke() {
   pmState.strokeHistory.push(
     pmState.ctx.getImageData(0, 0, PM_SIZE, PM_SIZE)
   );
   pmState.current++;
-
   if (pmState.current >= pmState.steps.length) {
     showPmDone();
     return;
   }
-
   renderPmStep();
   document.getElementById('pmHint').textContent =
     '第 ' + pmState.current + ' 筆完成！繼續寫第 ' + (pmState.current + 1) + ' 筆';
@@ -5099,12 +5203,23 @@ function undoPmStroke() {
 
 function clearPmCanvas() {
   pmState.ctx.clearRect(0, 0, PM_SIZE, PM_SIZE);
-  pmState.current      = 0;
+  pmState.current = 0;
   pmState.strokeHistory = [];
   renderPmStep();
 }
 
 function skipPmStroke() { advancePmStroke(); }
+
+// ── Free draw stroke control ──────────────────────────────────────────────────
+function undoTraceStroke() {
+  if (pmState.traceHistory.length === 0) return;
+  pmState.traceCtx.putImageData(pmState.traceHistory.pop(), 0, 0);
+}
+
+function clearTraceCanvas() {
+  pmState.traceCtx.clearRect(0, 0, PM_SIZE, PM_SIZE);
+  pmState.traceHistory = [];
+}
 
 // ── Done screen ───────────────────────────────────────────────────────────────
 function showPmDone() {
@@ -5112,20 +5227,34 @@ function showPmDone() {
   const idx = pmState.charIdx;
   const hasNext = idx + 1 < charDataList.length;
 
-  document.querySelector('.pm-box').innerHTML = `
-    <button class="pm-close" onclick="closePracticeModal()">✕</button>
-    <div class="pm-done-char">${d.char}</div>
-    <div class="pm-done-msg">太棒了！${d.strokeCount} 筆全部完成 🎉</div>
-    <div class="pm-actions">
-      <button class="pm-btn" onclick="openPracticeModal(${idx})">再練一次</button>
-      ${hasNext ? `<button class="pm-btn" onclick="openPracticeModal(${idx + 1})">下一個字 →</button>` : ''}
-      <button class="pm-btn primary" onclick="closePracticeModal()">完成</button>
-    </div>`;
+  // Update hint to show completion message
+  const hint = document.getElementById('pmHint');
+  if (hint) {
+    hint.innerHTML = `<span style="color:var(--green);font-weight:700;">🎉 太棒了！${d.strokeCount} 筆全部完成！</span>`;
+  }
+
+  // Update progress dots — all done
+  const prog = document.getElementById('pmProgress');
+  if (prog) {
+    prog.querySelectorAll('.pm-dot').forEach(dot => {
+      dot.classList.remove('active');
+      dot.classList.add('done');
+    });
+  }
+
+  // Update action buttons: replace with 再練一次 (+ 下一個字 if available)
+  const actions = document.querySelector('.pm-actions');
+  if (actions) {
+    actions.innerHTML = `
+      <button class="pm-btn primary" onclick="openPracticeModal(${idx})">↩ 再練一次</button>
+      ${idx > 0 ? `<button class="pm-btn" onclick="openPracticeModal(${idx - 1}, 'guided')">← 上一個字</button>` : ''}
+      ${hasNext ? `<button class="pm-btn" onclick="openPracticeModal(${idx + 1}, 'guided')">下一個字 →</button>` : ''}
+      <button class="pm-btn" onclick="closePracticeModal()">完成</button>`;
+  }
 }
 
-// ── Canvas drawing ────────────────────────────────────────────────────────────
+// ── Guided canvas drawing ─────────────────────────────────────────────────────
 function attachPmDrawing(canvas) {
-  // Always attach fresh — canvas is a new element each time openPracticeModal runs
   function pmGetPos(e) {
     const r   = canvas.getBoundingClientRect();
     const src = e.touches ? e.touches[0] : e;
@@ -5134,7 +5263,6 @@ function attachPmDrawing(canvas) {
       y: (src.clientY - r.top)  * (canvas.height / r.height),
     };
   }
-
   function pmStart(e) {
     e.preventDefault();
     if (pmState.penTimer) { clearTimeout(pmState.penTimer); pmState.penTimer = null; }
@@ -5146,7 +5274,6 @@ function attachPmDrawing(canvas) {
     pmState.ctx.fillStyle = pmState.ctx.strokeStyle;
     pmState.ctx.fill();
   }
-
   function pmMove(e) {
     if (!pmState.penDown) return;
     e.preventDefault();
@@ -5157,7 +5284,6 @@ function attachPmDrawing(canvas) {
     pmState.ctx.stroke();
     pmState.lastX = p.x; pmState.lastY = p.y;
   }
-
   function pmEnd(e) {
     if (!pmState.penDown) return;
     pmState.penDown = false;
@@ -5165,7 +5291,6 @@ function attachPmDrawing(canvas) {
       if (pmState.current < pmState.steps.length) advancePmStroke();
     }, 600);
   }
-
   canvas.addEventListener('mousedown',  pmStart);
   canvas.addEventListener('mousemove',  pmMove);
   canvas.addEventListener('mouseup',    pmEnd);
@@ -5174,34 +5299,58 @@ function attachPmDrawing(canvas) {
   canvas.addEventListener('touchmove',  pmMove,  { passive: false });
   canvas.addEventListener('touchend',   pmEnd,   { passive: false });
 }
+
+// ── Free draw canvas drawing ──────────────────────────────────────────────────
+function attachTraceDrawing(canvas) {
+  function getPos(e) {
+    const r   = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return {
+      x: (src.clientX - r.left) * (canvas.width  / r.width),
+      y: (src.clientY - r.top)  * (canvas.height / r.height),
+    };
+  }
+  function tStart(e) {
+    e.preventDefault();
+    // Save snapshot before each new stroke (for undo)
+    pmState.traceHistory.push(
+      pmState.traceCtx.getImageData(0, 0, PM_SIZE, PM_SIZE)
+    );
+    pmState.tracePenDown = true;
+    const p = getPos(e);
+    pmState.traceLastX = p.x; pmState.traceLastY = p.y;
+    pmState.traceCtx.beginPath();
+    pmState.traceCtx.arc(p.x, p.y, pmState.traceCtx.lineWidth / 2, 0, Math.PI * 2);
+    pmState.traceCtx.fillStyle = pmState.traceCtx.strokeStyle;
+    pmState.traceCtx.fill();
+  }
+  function tMove(e) {
+    if (!pmState.tracePenDown) return;
+    e.preventDefault();
+    const p = getPos(e);
+    pmState.traceCtx.beginPath();
+    pmState.traceCtx.moveTo(pmState.traceLastX, pmState.traceLastY);
+    pmState.traceCtx.lineTo(p.x, p.y);
+    pmState.traceCtx.stroke();
+    pmState.traceLastX = p.x; pmState.traceLastY = p.y;
+  }
+  function tEnd(e) { pmState.tracePenDown = false; }
+  canvas.addEventListener('mousedown',  tStart);
+  canvas.addEventListener('mousemove',  tMove);
+  canvas.addEventListener('mouseup',    tEnd);
+  canvas.addEventListener('mouseleave', tEnd);
+  canvas.addEventListener('touchstart', tStart, { passive: false });
+  canvas.addEventListener('touchmove',  tMove,  { passive: false });
+  canvas.addEventListener('touchend',   tEnd,   { passive: false });
+}
 </script>
 
-<!-- ══ 引導練習 Modal ══════════════════════════════════════════════════════ -->
+<!-- ══ 筆順練習 Modal ══════════════════════════════════════════════════════ -->
 <div id="practiceModal">
   <div class="pm-box">
     <button class="pm-close" onclick="closePracticeModal()">✕</button>
-    <div class="pm-title">
-      <span id="pmChar"></span>
-      <span id="pmBopoStr" style="font-size:28px;color:var(--red)"></span>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span class="pm-stroke-info" id="pmStrokeInfo"></span>
-      <button class="pm-ghost-toggle on" id="pmGhostToggle" onclick="togglePmGhost()">顯示範字</button>
-    </div>
-    <div class="pm-canvas-wrap" id="pmCanvasWrap">
-      <div class="pm-ghost" id="pmGhost"></div>
-      <canvas id="pmCanvas"></canvas>
-    </div>
-    <div class="pm-progress" id="pmProgress"></div>
-    <div class="pm-hint" id="pmHint">請描寫第 1 筆</div>
-    <div class="pm-actions" id="pmActions">
-      <button class="pm-btn" onclick="undoPmStroke()">↩ 上一筆</button>
-      <button class="pm-btn" onclick="clearPmCanvas()">清除重寫</button>
-      <button class="pm-btn" onclick="skipPmStroke()">跳過此筆 →</button>
-    </div>
   </div>
 </div>
-
 <!-- ══ 收藏選單 Popup ══════════════════════════════════════════════════════ -->
 <div id="favPopup">
   <div class="fav-popup-title" id="favPopupTitle">加入清單</div>
