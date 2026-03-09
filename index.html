@@ -614,22 +614,9 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
 .pm-box {
   background: var(--paper); border-radius: 16px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.32);
-  padding: 16px 20px 16px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  max-width: 480px; width: 96vw;
-  max-height: 96vh;
-  position: relative;
-  overflow: hidden;
-}
-/* 格子區域可以捲動，但 tabs/按鈕固定 */
-.pm-scroll-area {
-  flex: 1; overflow-y: auto; overflow-x: hidden;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  width: 100%; -webkit-overflow-scrolling: touch;
-}
-/* 底部按鈕區固定不隨格子捲動 */
-.pm-actions {
-  flex-shrink: 0; width: 100%;
+  padding: 28px 32px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  max-width: 480px; width: 92vw; position: relative;
 }
 
 .pm-close {
@@ -641,9 +628,8 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
 
 .pm-title {
   font-family: 'Noto Serif TC', serif;
-  font-size: 20px; font-weight: 700; color: var(--ink);
-  display: flex; align-items: center; gap: 8px;
-  flex-shrink: 0; width: 100%;
+  font-size: 22px; font-weight: 700; color: var(--ink);
+  display: flex; align-items: center; gap: 10px;
 }
 .pm-stroke-info {
   font-size: 13px; color: var(--muted); letter-spacing: 1px;
@@ -687,25 +673,15 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
 }
 
 /* 底部按鈕列 */
-.pm-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding-top: 4px; }
+.pm-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .pm-btn {
-  width: 48px; height: 48px; border-radius: 12px; border: 1.5px solid var(--grid);
-  background: white; cursor: pointer; font-size: 20px; color: var(--ink);
-  transition: all 0.15s; display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; position: relative;
+  padding: 7px 20px; border-radius: 8px; border: 1.5px solid var(--grid);
+  background: none; cursor: pointer; font-size: 13px; color: var(--ink);
+  transition: all 0.15s;
 }
-.pm-btn:hover   { border-color: var(--gold); background: rgba(196,160,64,0.08); }
+.pm-btn:hover   { border-color: var(--gold); color: var(--gold); }
 .pm-btn.primary { background: var(--gold); border-color: var(--gold); color: white; }
 .pm-btn.primary:hover { background: #b8962e; }
-/* tooltip */
-.pm-btn::after {
-  content: attr(data-tip);
-  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
-  background: var(--ink); color: white; font-size: 11px; white-space: nowrap;
-  padding: 3px 8px; border-radius: 5px; pointer-events: none;
-  opacity: 0; transition: opacity 0.15s;
-}
-.pm-btn:hover::after { opacity: 1; }
 
 /* 完成畫面 */
 .pm-done-char {
@@ -4965,11 +4941,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 // 引導練習 Modal
 // ══════════════════════════════════════════════════════════════════════════════
-// Dynamic canvas size: min(82vw, 400px) computed at open time
-function calcPmSize() {
-  return Math.min(Math.floor(window.innerWidth * 0.82), 400);
-}
-let PM_SIZE = 340; // will be recalculated on open
+const PM_SIZE = 340;
 
 // ── State ────────────────────────────────────────────────────────────────────
 let pmState = {
@@ -4997,18 +4969,8 @@ function buildPmHTML(mode) {
   const bopoStr = d.bopomofo + (toneMarks[d.tone] || '');
 
   const hasNext = pmState.charIdx + 1 < charDataList.length;
-  const hasPrev = pmState.charIdx > 0;
-  const nextBtnGuided = hasNext
-    ? `<button class="pm-btn" onclick="openPracticeModal(${pmState.charIdx + 1}, 'guided')" data-tip="下一個字" title="下一個字">&#x276F;</button>`
-    : '';
-  const prevBtnGuided = hasPrev
-    ? `<button class="pm-btn" onclick="openPracticeModal(${pmState.charIdx - 1}, 'guided')" data-tip="上一個字" title="上一個字">&#x276E;</button>`
-    : '';
-  const nextBtnMode = hasNext
-    ? `<button class="pm-btn" onclick="openPracticeModal(${pmState.charIdx + 1}, '${mode}')" data-tip="下一個字" title="下一個字">&#x276F;</button>`
-    : '';
-  const prevBtnMode = hasPrev
-    ? `<button class="pm-btn" onclick="openPracticeModal(${pmState.charIdx - 1}, '${mode}')" data-tip="上一個字" title="上一個字">&#x276E;</button>`
+  const nextBtn = hasNext
+    ? `<button class="pm-btn" onclick="openPracticeModal(${pmState.charIdx + 1}, 'guided')">下一個字 →</button>`
     : '';
 
   if (mode === 'guided') {
@@ -5016,31 +4978,28 @@ function buildPmHTML(mode) {
       <button class="pm-close" onclick="closePracticeModal()">✕</button>
       <div class="pm-title">
         <span>${d.char}</span>
-        <span style="font-size:24px;color:var(--red)">${bopoStr}</span>
+        <span style="font-size:28px;color:var(--red)">${bopoStr}</span>
       </div>
       <div class="pm-tabs">
-        <button class="pm-tab active" onclick="switchPmMode('guided')">✍ 引導</button>
-        <button class="pm-tab" onclick="switchPmMode('trace')">描寫</button>
-        <button class="pm-tab" onclick="switchPmMode('blank')">空白格</button>
+        <button class="pm-tab active" onclick="switchPmMode('guided')">✍ 引導練習</button>
+        <button class="pm-tab" onclick="switchPmMode('trace')">描寫練習</button>
+        <button class="pm-tab" onclick="switchPmMode('blank')">空白格練習</button>
       </div>
-      <div class="pm-scroll-area">
-        <div style="display:flex;align-items:center;gap:10px;width:100%;justify-content:center;">
-          <span class="pm-stroke-info" id="pmStrokeInfo"></span>
-          <button class="pm-ghost-toggle on" id="pmGhostToggle" onclick="togglePmGhost()">👁 範字</button>
-        </div>
-        <div class="pm-canvas-wrap" id="pmCanvasWrap">
-          <div class="pm-ghost" id="pmGhost"></div>
-          <canvas id="pmCanvas"></canvas>
-        </div>
-        <div class="pm-progress" id="pmProgress"></div>
-        <div class="pm-hint" id="pmHint"></div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="pm-stroke-info" id="pmStrokeInfo"></span>
+        <button class="pm-ghost-toggle on" id="pmGhostToggle" onclick="togglePmGhost()">顯示範字</button>
       </div>
+      <div class="pm-canvas-wrap" id="pmCanvasWrap">
+        <div class="pm-ghost" id="pmGhost"></div>
+        <canvas id="pmCanvas"></canvas>
+      </div>
+      <div class="pm-progress" id="pmProgress"></div>
+      <div class="pm-hint" id="pmHint"></div>
       <div class="pm-actions">
-        ${prevBtnGuided}
-        <button class="pm-btn" onclick="undoPmStroke()" data-tip="上一筆" title="上一筆">↩</button>
-        <button class="pm-btn" onclick="clearPmCanvas()" data-tip="清除重寫" title="清除重寫">🗑</button>
-        <button class="pm-btn" onclick="skipPmStroke()" data-tip="跳過此筆" title="跳過此筆">⏭</button>
-        ${nextBtnGuided}
+        <button class="pm-btn" onclick="undoPmStroke()">↩ 上一筆</button>
+        <button class="pm-btn" onclick="clearPmCanvas()">清除重寫</button>
+        <button class="pm-btn" onclick="skipPmStroke()">跳過此筆 →</button>
+        ${nextBtn}
       </div>`;
   } else {
     // trace or blank mode — full canvas for free writing
@@ -5052,25 +5011,22 @@ function buildPmHTML(mode) {
       <button class="pm-close" onclick="closePracticeModal()">✕</button>
       <div class="pm-title">
         <span>${d.char}</span>
-        <span style="font-size:24px;color:var(--red)">${bopoStr}</span>
+        <span style="font-size:28px;color:var(--red)">${bopoStr}</span>
       </div>
       <div class="pm-tabs">
-        <button class="pm-tab" onclick="switchPmMode('guided')">✍ 引導</button>
-        <button class="pm-tab ${mode==='trace'?'active':''}" onclick="switchPmMode('trace')">描寫</button>
-        <button class="pm-tab ${mode==='blank'?'active':''}" onclick="switchPmMode('blank')">空白格</button>
+        <button class="pm-tab" onclick="switchPmMode('guided')">✍ 引導練習</button>
+        <button class="pm-tab ${mode==='trace'?'active':''}" onclick="switchPmMode('trace')">描寫練習</button>
+        <button class="pm-tab ${mode==='blank'?'active':''}" onclick="switchPmMode('blank')">空白格練習</button>
       </div>
-      <div class="pm-scroll-area">
-        <div style="font-size:11px;color:var(--muted);letter-spacing:1px;">${modeLabel}</div>
-        <div class="pm-trace-wrap" id="pmTraceWrap">
-          ${ghostHtml}
-          <canvas id="pmTraceCanvas"></canvas>
-        </div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;">${modeLabel}</div>
+      <div class="pm-trace-wrap" id="pmTraceWrap">
+        ${ghostHtml}
+        <canvas id="pmTraceCanvas"></canvas>
       </div>
       <div class="pm-actions">
-        ${prevBtnMode}
-        <button class="pm-btn" onclick="undoTraceStroke()" data-tip="上一筆" title="上一筆">↩</button>
-        <button class="pm-btn" onclick="clearTraceCanvas()" data-tip="清除重寫" title="清除重寫">🗑</button>
-        ${nextBtnMode}
+        <button class="pm-btn" onclick="undoTraceStroke()">↩ 上一筆</button>
+        <button class="pm-btn" onclick="clearTraceCanvas()">清除重寫</button>
+        ${hasNext ? `<button class="pm-btn" onclick="openPracticeModal(${pmState.charIdx + 1}, '${mode}')">下一個字 →</button>` : ''}
       </div>`;
   }
 }
@@ -5095,7 +5051,6 @@ function openPracticeModal(idx, mode) {
 
   mode = mode || 'guided';
 
-  PM_SIZE = calcPmSize();
   pmState.charIdx = idx;
   pmState.data    = d;
   pmState.mode    = mode;
@@ -5285,10 +5240,9 @@ function showPmDone() {
   const actions = document.querySelector('.pm-actions');
   if (actions) {
     actions.innerHTML = `
-      ${idx > 0 ? `<button class="pm-btn" onclick="openPracticeModal(${idx - 1}, 'guided')" data-tip="上一個字" title="上一個字">&#x276E;</button>` : ''}
-      <button class="pm-btn primary" onclick="openPracticeModal(${idx})" data-tip="再練一次" title="再練一次">↩</button>
-      <button class="pm-btn" onclick="closePracticeModal()" data-tip="完成" title="完成">✓</button>
-      ${hasNext ? `<button class="pm-btn" onclick="openPracticeModal(${idx + 1}, 'guided')" data-tip="下一個字" title="下一個字">&#x276F;</button>` : ''}`;
+      <button class="pm-btn primary" onclick="openPracticeModal(${idx})">↩ 再練一次</button>
+      ${hasNext ? `<button class="pm-btn" onclick="openPracticeModal(${idx + 1}, 'guided')">下一個字 →</button>` : ''}
+      <button class="pm-btn" onclick="closePracticeModal()">完成</button>`;
   }
 }
 
@@ -5328,7 +5282,7 @@ function attachPmDrawing(canvas) {
     pmState.penDown = false;
     pmState.penTimer = setTimeout(() => {
       if (pmState.current < pmState.steps.length) advancePmStroke();
-    }, 600);
+    }, 400);
   }
   canvas.addEventListener('mousedown',  pmStart);
   canvas.addEventListener('mousemove',  pmMove);
