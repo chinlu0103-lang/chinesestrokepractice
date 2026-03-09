@@ -578,10 +578,10 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
   border-radius: 10px; overflow: hidden; width: 100%;
 }
 .pm-tab {
-  flex: 1; padding: 6px 4px; font-size: 12px; font-weight: 700;
+  flex: 1; padding: 7px 4px; font-size: 12px; font-weight: 700;
   border: none; background: white; color: var(--muted);
   cursor: pointer; transition: all 0.15s; border-right: 1px solid var(--grid);
-  line-height: 1.2;
+  line-height: 1.3;
 }
 .pm-tab:last-child { border-right: none; }
 .pm-tab.active { background: var(--gold); color: white; }
@@ -614,11 +614,9 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
 .pm-box {
   background: var(--paper); border-radius: 16px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.32);
-  padding: 16px 20px 16px;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 28px 32px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
   max-width: 480px; width: 92vw; position: relative;
-  max-height: 94dvh; max-height: 94vh;
-  overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 
 .pm-close {
@@ -4943,14 +4941,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 // 引導練習 Modal
 // ══════════════════════════════════════════════════════════════════════════════
-// Responsive canvas: fit within viewport, leaving room for title/tabs/buttons
-function calcPmSize() {
-  const overhead = 280; // title + tabs + stroke-info + progress + hint + buttons + gap + padding
-  const maxByHeight = Math.floor(window.innerHeight * 0.94) - overhead;
-  const maxByWidth  = Math.floor(window.innerWidth  * 0.86);
-  return Math.min(Math.max(maxByHeight, 180), maxByWidth, 360);
-}
-let PM_SIZE = calcPmSize();
+const PM_SIZE = 340;
 
 // ── State ────────────────────────────────────────────────────────────────────
 let pmState = {
@@ -5060,7 +5051,6 @@ function openPracticeModal(idx, mode) {
 
   mode = mode || 'guided';
 
-  PM_SIZE = calcPmSize(); // recalc for orientation/screen size
   pmState.charIdx = idx;
   pmState.data    = d;
   pmState.mode    = mode;
@@ -5232,6 +5222,19 @@ function showPmDone() {
   const idx = pmState.charIdx;
   const hasNext = idx + 1 < charDataList.length;
 
+  // ── 鎖定畫布，不再接受新筆跡 ─────────────────────────────────────────────
+  pmState.done = true;
+  pmState.penDown = false;
+  if (pmState.penTimer) { clearTimeout(pmState.penTimer); pmState.penTimer = null; }
+
+  // ── 隱藏示範筆畫（ghost），只保留使用者自己的筆跡 ───────────────────────
+  // canvas 在引導模式中是累積疊加的（renderPmStep 不清除 canvas），
+  // 所以最後一筆完成時 canvas 上已有所有筆的使用者筆跡，直接隱藏 ghost 即可。
+  const ghost = document.getElementById('pmGhost');
+  if (ghost) ghost.style.opacity = '0';
+  const ghostToggle = document.getElementById('pmGhostToggle');
+  if (ghostToggle) ghostToggle.style.display = 'none';
+
   // Update hint to show completion message
   const hint = document.getElementById('pmHint');
   if (hint) {
@@ -5247,13 +5250,14 @@ function showPmDone() {
     });
   }
 
-  // Update action buttons: replace with 再練一次 (+ 下一個字 if available)
+  // Update action buttons
   const actions = document.querySelector('.pm-actions');
   if (actions) {
     actions.innerHTML = `
-      <button class="pm-btn primary" onclick="openPracticeModal(${idx})">↩ 再練一次</button>
-      ${hasNext ? `<button class="pm-btn" onclick="openPracticeModal(${idx + 1}, 'guided')">下一個字 →</button>` : ''}
-      <button class="pm-btn" onclick="closePracticeModal()">完成</button>`;
+      ${idx > 0 ? `<button class="pm-btn" onclick="openPracticeModal(${idx - 1}, 'guided')" title="上一個字">&#x276E;</button>` : ''}
+      <button class="pm-btn primary" onclick="openPracticeModal(${idx})" title="再練一次">↩ 再練一次</button>
+      <button class="pm-btn" onclick="closePracticeModal()" title="完成">✓ 完成</button>
+      ${hasNext ? `<button class="pm-btn" onclick="openPracticeModal(${idx + 1}, 'guided')" title="下一個字">&#x276F;</button>` : ''}`;
   }
 }
 
@@ -5269,6 +5273,7 @@ function attachPmDrawing(canvas) {
   }
   function pmStart(e) {
     e.preventDefault();
+    if (pmState.done) return;  // 練習完成，不再畫新筆跡
     if (pmState.penTimer) { clearTimeout(pmState.penTimer); pmState.penTimer = null; }
     pmState.penDown = true;
     const p = pmGetPos(e);
@@ -5293,7 +5298,7 @@ function attachPmDrawing(canvas) {
     pmState.penDown = false;
     pmState.penTimer = setTimeout(() => {
       if (pmState.current < pmState.steps.length) advancePmStroke();
-    }, 600);
+    }, 400);
   }
   canvas.addEventListener('mousedown',  pmStart);
   canvas.addEventListener('mousemove',  pmMove);
