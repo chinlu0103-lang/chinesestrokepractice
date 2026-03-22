@@ -614,9 +614,11 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
 .pm-box {
   background: var(--paper); border-radius: 16px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.32);
-  padding: 28px 32px 24px;
-  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  padding: 20px 24px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
   max-width: 480px; width: 92vw; position: relative;
+  max-height: 94dvh; max-height: 94vh;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 
 .pm-close {
@@ -699,7 +701,7 @@ body { font-family: 'Noto Sans TC', sans-serif; background: #f0ebe0; color: var(
 .pm-ghost-toggle:hover { border-color: var(--gold); color: var(--gold); }
 .pm-ghost-toggle.on { background: rgba(196,160,64,0.12); border-color: var(--gold); color: #9a7820; }
 /* ══ 詞語選取模式 ══════════════════════════════════════════════════════════ */
-.word-mode-area { padding: 8px 0; }
+.word-mode-area { padding: 8px 0; width: 100%; }
 .word-group { margin-bottom: 18px; }
 .word-group-title {
   font-size: 11px; font-weight: 700; letter-spacing: 1px;
@@ -5037,7 +5039,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 // 引導練習 Modal
 // ══════════════════════════════════════════════════════════════════════════════
-const PM_SIZE = 340;
+function calcPmSize() {
+  const overhead = 280; // header + tabs + bopo label + buttons + padding
+  const maxByHeight = Math.floor(window.innerHeight * 0.94) - overhead;
+  const maxByWidth  = Math.floor(window.innerWidth  * 0.86);
+  return Math.min(Math.max(maxByHeight, 180), maxByWidth, 360);
+}
+let PM_SIZE = calcPmSize();
 
 // ── State ────────────────────────────────────────────────────────────────────
 let pmState = {
@@ -5145,6 +5153,7 @@ function openPracticeModal(idx, mode) {
   const d = charDataList[idx];
   if (!d || !d.strokeData) return;
 
+  PM_SIZE = calcPmSize(); // recalc on every open for current screen size
   mode = mode || 'guided';
 
   pmState.charIdx = idx;
