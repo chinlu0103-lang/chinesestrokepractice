@@ -3528,42 +3528,48 @@ function renderWordMode(themeKey) {
   const groups = THEME_WORDS[themeKey];
   if (!groups) return;
 
-  const list = document.getElementById('charList');
-  list.innerHTML = '';
+  // Render into both desktop (charList) and mobile (charListMobile) containers
+  ['charList', 'charListMobile'].forEach(listId => {
+    const list = document.getElementById(listId);
+    if (!list) return;
+    const isMobile = listId === 'charListMobile';
+    list.innerHTML = '';
 
-  // Container
-  const wrap = document.createElement('div');
-  wrap.className = 'word-mode-area';
-  wrap.id = 'wordModeWrap';
+    // Container
+    const wrap = document.createElement('div');
+    wrap.className = 'word-mode-area';
+    wrap.id = isMobile ? 'wordModeWrapMobile' : 'wordModeWrap';
 
-  // ── Selected words bar ────────────────────────────────────────────────────
-  const bar = document.createElement('div');
-  bar.className = 'selected-words-bar' + (Object.keys(wordModeSelected).length ? ' has-items' : '');
-  bar.id = 'selectedWordsBar';
-  bar.innerHTML = '<div class="selected-words-bar-title">已選詞語（點擊 ✕ 可移除整個詞，滑鼠移到字上可移除單字）</div>' +
-    '<div class="selected-word-tokens" id="selectedWordTokens"></div>' +
-    '<div class="word-mode-actions">' +
-    '<button class="word-mode-btn" onclick="clearWordSelection()">清除全部</button>' +
-    '<button class="word-mode-btn primary" id="wordModePracticeBtn" onclick="startWordPractice()">開始練習 →</button>' +
-    '</div>';
-  wrap.appendChild(bar);
+    // ── Selected words bar ────────────────────────────────────────────────
+    const bar = document.createElement('div');
+    bar.className = 'selected-words-bar' + (Object.keys(wordModeSelected).length ? ' has-items' : '');
+    bar.id = isMobile ? 'selectedWordsBarMobile' : 'selectedWordsBar';
+    bar.innerHTML =
+      '<div class="selected-words-bar-title">已選詞語（點擊 ✕ 可移除整個詞，滑鼠移到字上可移除單字）</div>' +
+      '<div class="selected-word-tokens" id="' + (isMobile ? 'selectedWordTokensMobile' : 'selectedWordTokens') + '"></div>' +
+      '<div class="word-mode-actions">' +
+      '<button class="word-mode-btn" onclick="clearWordSelection()">清除全部</button>' +
+      '<button class="word-mode-btn primary" id="' + (isMobile ? 'wordModePracticeBtnMobile' : 'wordModePracticeBtn') + '" onclick="startWordPractice()">開始練習 →</button>' +
+      '</div>';
+    wrap.appendChild(bar);
 
-  // ── Word groups ───────────────────────────────────────────────────────────
-  const chipsDiv = document.createElement('div');
-  chipsDiv.className = 'word-chips';
-  groups.forEach(([wordLabel, chars]) => {
-    const chip = document.createElement('div');
-    const isSelected = !!wordModeSelected[wordLabel];
-    chip.className = 'word-chip' + (isSelected ? ' selected' : '');
-    chip.dataset.word = wordLabel;
-    chip.innerHTML = wordLabel +
-      '<span class="word-chip-count">' + chars.length + '字</span>';
-    chip.onclick = () => toggleWordChip(wordLabel, chars, themeKey);
-    chipsDiv.appendChild(chip);
+    // ── Word chips ────────────────────────────────────────────────────────
+    const chipsDiv = document.createElement('div');
+    chipsDiv.className = 'word-chips';
+    groups.forEach(([wordLabel, chars]) => {
+      const chip = document.createElement('div');
+      const isSelected = !!wordModeSelected[wordLabel];
+      chip.className = 'word-chip' + (isSelected ? ' selected' : '');
+      chip.dataset.word = wordLabel;
+      chip.innerHTML = wordLabel +
+        '<span class="word-chip-count">' + chars.length + '字</span>';
+      chip.onclick = () => toggleWordChip(wordLabel, chars, themeKey);
+      chipsDiv.appendChild(chip);
+    });
+    wrap.appendChild(chipsDiv);
+    list.appendChild(wrap);
   });
-  wrap.appendChild(chipsDiv);
 
-  list.appendChild(wrap);
   renderSelectedBar();
 }
 
@@ -3573,74 +3579,83 @@ function toggleWordChip(wordLabel, chars, themeKey) {
   } else {
     wordModeSelected[wordLabel] = [...chars];
   }
-  // Update chip visual
-  const wrap = document.getElementById('wordModeWrap');
-  if (wrap) {
-    wrap.querySelectorAll('.word-chip').forEach(chip => {
-      chip.classList.toggle('selected', !!wordModeSelected[chip.dataset.word]);
-    });
-  }
+  // Update chip visual in both desktop and mobile wrappers
+  ['wordModeWrap', 'wordModeWrapMobile'].forEach(wId => {
+    const wrap = document.getElementById(wId);
+    if (wrap) {
+      wrap.querySelectorAll('.word-chip').forEach(chip => {
+        chip.classList.toggle('selected', !!wordModeSelected[chip.dataset.word]);
+      });
+    }
+  });
   renderSelectedBar();
 }
 
 function renderSelectedBar() {
-  const bar = document.getElementById('selectedWordsBar');
-  const tokens = document.getElementById('selectedWordTokens');
-  if (!bar || !tokens) return;
+  // Update both desktop and mobile containers
+  ['', 'Mobile'].forEach(suffix => {
+    const bar    = document.getElementById('selectedWordsBar'    + suffix);
+    const tokens = document.getElementById('selectedWordTokens' + suffix);
+    if (!bar || !tokens) return;
 
-  const keys = Object.keys(wordModeSelected);
-  bar.classList.toggle('has-items', keys.length > 0);
-  tokens.innerHTML = '';
+    const keys = Object.keys(wordModeSelected);
+    bar.classList.toggle('has-items', keys.length > 0);
+    tokens.innerHTML = '';
 
-  keys.forEach(wordLabel => {
-    const chars = wordModeSelected[wordLabel];
-    if (!chars || chars.length === 0) return;
+    keys.forEach(wordLabel => {
+      const chars = wordModeSelected[wordLabel];
+      if (!chars || chars.length === 0) return;
 
-    const token = document.createElement('div');
-    token.className = 'word-token';
+      const token = document.createElement('div');
+      token.className = 'word-token';
 
-    const charsDiv = document.createElement('div');
-    charsDiv.className = 'word-token-chars';
-    chars.forEach((ch, i) => {
-      const span = document.createElement('span');
-      span.className = 'word-token-char';
-      span.textContent = ch;
-      const rmBtn = document.createElement('span');
-      rmBtn.className = 'char-remove';
-      rmBtn.textContent = '×';
-      rmBtn.title = '移除「' + ch + '」';
-      rmBtn.onclick = (e) => {
-        e.stopPropagation();
-        wordModeSelected[wordLabel] = wordModeSelected[wordLabel].filter((_, j) => j !== i);
-        if (wordModeSelected[wordLabel].length === 0) {
-          delete wordModeSelected[wordLabel];
-          // Unmark chip
-          const wrap = document.getElementById('wordModeWrap');
+      const charsDiv = document.createElement('div');
+      charsDiv.className = 'word-token-chars';
+      chars.forEach((ch, i) => {
+        const span = document.createElement('span');
+        span.className = 'word-token-char';
+        span.textContent = ch;
+        const rmBtn = document.createElement('span');
+        rmBtn.className = 'char-remove';
+        rmBtn.textContent = '×';
+        rmBtn.title = '移除「' + ch + '」';
+        rmBtn.onclick = (e) => {
+          e.stopPropagation();
+          wordModeSelected[wordLabel] = wordModeSelected[wordLabel].filter((_, j) => j !== i);
+          if (wordModeSelected[wordLabel].length === 0) {
+            delete wordModeSelected[wordLabel];
+            // Unmark chip in both wrappers
+            ['wordModeWrap', 'wordModeWrapMobile'].forEach(wId => {
+              const wrap = document.getElementById(wId);
+              if (wrap) wrap.querySelectorAll('.word-chip').forEach(c => {
+                if (c.dataset.word === wordLabel) c.classList.remove('selected');
+              });
+            });
+          }
+          renderSelectedBar();
+        };
+        span.appendChild(rmBtn);
+        charsDiv.appendChild(span);
+      });
+      token.appendChild(charsDiv);
+
+      const rmAll = document.createElement('button');
+      rmAll.className = 'word-token-remove';
+      rmAll.textContent = '✕';
+      rmAll.title = '移除整個詞「' + wordLabel + '」';
+      rmAll.onclick = () => {
+        delete wordModeSelected[wordLabel];
+        ['wordModeWrap', 'wordModeWrapMobile'].forEach(wId => {
+          const wrap = document.getElementById(wId);
           if (wrap) wrap.querySelectorAll('.word-chip').forEach(c => {
             if (c.dataset.word === wordLabel) c.classList.remove('selected');
           });
-        }
+        });
         renderSelectedBar();
       };
-      span.appendChild(rmBtn);
-      charsDiv.appendChild(span);
+      token.appendChild(rmAll);
+      tokens.appendChild(token);
     });
-    token.appendChild(charsDiv);
-
-    const rmAll = document.createElement('button');
-    rmAll.className = 'word-token-remove';
-    rmAll.textContent = '✕';
-    rmAll.title = '移除整個詞「' + wordLabel + '」';
-    rmAll.onclick = () => {
-      delete wordModeSelected[wordLabel];
-      const wrap = document.getElementById('wordModeWrap');
-      if (wrap) wrap.querySelectorAll('.word-chip').forEach(c => {
-        if (c.dataset.word === wordLabel) c.classList.remove('selected');
-      });
-      renderSelectedBar();
-    };
-    token.appendChild(rmAll);
-    tokens.appendChild(token);
   });
 }
 
@@ -5387,7 +5402,7 @@ function attachPmDrawing(canvas) {
     pmState.penDown = false;
     pmState.penTimer = setTimeout(() => {
       if (pmState.current < pmState.steps.length) advancePmStroke();
-    }, 600);
+    }, 200);
   }
   canvas.addEventListener('mousedown',  pmStart);
   canvas.addEventListener('mousemove',  pmMove);
