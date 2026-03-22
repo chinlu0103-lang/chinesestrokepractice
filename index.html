@@ -3488,16 +3488,20 @@ function selectGrade(grade, btn) {
 function syncDesktopTabs(grade) { selectGrade(grade); }
 
 function renderCharList(chars) {
-  const list = document.getElementById('charList');
-  list.innerHTML = '';
   const toneMarks = ['','ˉ','ˊ','ˇ','ˋ','˙'];
-  chars.forEach(([ch, bopo, tone]) => {
-    const chip = document.createElement('div');
-    chip.className = 'char-chip' + (selectedChars.has(ch) ? ' selected' : '');
-    chip.dataset.char = ch;
-    chip.innerHTML = `<span class="zh">${ch}</span><span class="bopo">${bopo}${toneMarks[tone]||''}</span>`;
-    chip.onclick = () => toggleChar(ch);
-    list.appendChild(chip);
+  ['charList', 'charListMobile'].forEach(listId => {
+    const list = document.getElementById(listId);
+    if (!list) return;
+    list.innerHTML = '';
+    if (!chars) return;
+    chars.forEach(([ch, bopo, tone]) => {
+      const chip = document.createElement('div');
+      chip.className = 'char-chip' + (selectedChars.has(ch) ? ' selected' : '');
+      chip.dataset.char = ch;
+      chip.innerHTML = `<span class="zh">${ch}</span><span class="bopo">${bopo}${toneMarks[tone]||''}</span>`;
+      chip.onclick = () => toggleChar(ch);
+      list.appendChild(chip);
+    });
   });
 }
 
@@ -3680,8 +3684,11 @@ function startWordPractice() {
 }
 
 function renderCustomMode() {
-  const list = document.getElementById('charList');
-  list.innerHTML = `<div style="padding:12px;font-size:13px;color:var(--muted);width:100%;line-height:1.8;">在上方搜尋框輸入任意國字，按 Enter 加入選擇清單。</div>`;
+  const msg = '<div style="padding:12px;font-size:13px;color:var(--muted);width:100%;line-height:1.8;">在上方搜尋框輸入任意國字，按 Enter 加入選擇清單。</div>';
+  ['charList', 'charListMobile'].forEach(listId => {
+    const list = document.getElementById(listId);
+    if (list) list.innerHTML = msg;
+  });
 }
 
 function handleSearch(val) {
